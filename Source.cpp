@@ -273,16 +273,14 @@ void keyboardFuncion(GLFWwindow* window, int key, int scancode, int action, int 
 	switch (key)
 	{
 	case GLFW_KEY_SPACE:
-		duplicateObject(models[selectedModel]->indexObject);
+		//duplicateObject(models[selectedModel]->indexObject);
 		break;
 	case GLFW_KEY_P:
 		selectedModel++;
 		break;
 	case GLFW_KEY_O:
 		selectedModel--;
-		break;
-	default:
-		break;
+		break;		
 	}
 }
 
@@ -322,6 +320,20 @@ void init(GLFWwindow* window) {
 		models[i]->generatePoints();
 	}
 	generateIDs();
+}
+
+void pseudoAIEvent() {
+	float dy = (models[Sonic]->posZ - models[Lua]->posZ);
+	float dx = (models[Sonic]->posX - models[Lua]->posX);
+	if ((int)dx == 0) {
+		models[Lua]->posZ += (dy > 0) ? 0.05f : -0.05f;
+	}
+	else {
+		float m = (float)dy / dx;
+		float b = models[Lua]->posZ - (m * models[Lua]->posX);
+		models[Lua]->posX += (dx > 0) ? 0.05f : -0.05f;
+		models[Lua]->posZ = (m * models[Lua]->posX) + b;
+	}
 }
 
 int main() {
@@ -508,7 +520,7 @@ int main() {
 			cam_moved = true;
 		}
 		if (glfwGetKey(window, GLFW_KEY_I)) {
-			models[selectedModel]->posZ -= 0.1f;
+			models[selectedModel]->posZ -= 0.2f;
 			if (top == false) {
 				cam_pos[0] = models[Sonic]->posX + 35.0f;
 				cam_pos[1] = models[Sonic]->posY + 30.0f;
@@ -519,7 +531,7 @@ int main() {
 			}
 		}
 		if (glfwGetKey(window, GLFW_KEY_K)) {
-			models[selectedModel]->posZ += 0.1f;
+			models[selectedModel]->posZ += 0.2f;
 			if (top == false) {
 				cam_pos[0] = models[Sonic]->posX + 35.0f;
 				cam_pos[1] = models[Sonic]->posY + 30.0f;
@@ -530,7 +542,7 @@ int main() {
 			}
 		}
 		if (glfwGetKey(window, GLFW_KEY_N)) {
-			models[selectedModel]->posY -= 0.1f;
+			models[selectedModel]->posY -= 0.2f;
 			if (top == false) {
 				cam_pos[0] = models[Sonic]->posX + 35.0f;
 				cam_pos[1] = models[Sonic]->posY + 30.0f;
@@ -541,7 +553,7 @@ int main() {
 			}
 		}
 		if (glfwGetKey(window, GLFW_KEY_M)) {
-			models[selectedModel]->posY += 0.1f;
+			models[selectedModel]->posY += 0.2f;
 			if (top == false) {
 				cam_pos[0] = models[Sonic]->posX + 35.0f;
 				cam_pos[1] = models[Sonic]->posY + 30.0f;
@@ -552,7 +564,7 @@ int main() {
 			}
 		}
 		if (glfwGetKey(window, GLFW_KEY_J)) {
-			models[selectedModel]->posX -= 0.1f;
+			models[selectedModel]->posX -= 0.2f;
 			if (top == false) {
 				cam_pos[0] = models[Sonic]->posX + 35.0f;
 				cam_pos[1] = models[Sonic]->posY + 30.0f;
@@ -563,7 +575,7 @@ int main() {
 			}
 		}
 		if (glfwGetKey(window, GLFW_KEY_L)) {
-			models[selectedModel]->posX += 0.1f;
+			models[selectedModel]->posX += 0.2f;
 			if (top == false) {
 				cam_pos[0] = models[Sonic]->posX + 35.0f;
 				cam_pos[1] = models[Sonic]->posY + 30.0f;
@@ -589,6 +601,8 @@ int main() {
 			mat4 view_mat = R * R2 * T;
 			glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
 		}
+
+		pseudoAIEvent();
 
 		if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_ESCAPE)) {
 			glfwSetWindowShouldClose(window, 1);
