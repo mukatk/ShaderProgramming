@@ -590,8 +590,8 @@ int main() {
 			double x = 0.0f;
 			double y = 0.0f;
 			glfwGetCursorPos(window, &x, &y);
-			models[selectedModel]->posX = x;
-			models[selectedModel]->posZ = y;
+			models[selectedModel]->posX = (x * (450.0f / (float)width)) - 225;
+			models[selectedModel]->posZ = (y * (344.0f / (float)height)) - 172;
 		}
 		/* update view matrix */
 		if (cam_moved) {
