@@ -14,16 +14,10 @@ public:
 	vector<Vertex*> allNormals;
 	vector<TextureMapping*> allTextures;
 	vector<Group*> groups;
-	float posX;
-	float posY;
-	float posZ;
 	int indexObject;
 
 	Mesh()
 	{
-		posX = 0.0f;
-		posY = 0.0f;
-		posZ = 0.0f;
 	}
 
 	~Mesh()
