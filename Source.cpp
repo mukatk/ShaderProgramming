@@ -14,16 +14,19 @@
 #include "Mesh.h"
 #include "Material.h"
 #include "OBJReader.h"
-
+#include "Object.h"
 
 
 using namespace std;
 
 bool top = true;
+bool selectMode = true;
 
 enum objeto {
-	Sonic = 0,
-	Lua = 1
+	Terreno = 0,
+	Sonic = 1,
+	Pedra = 2,
+	Pumba = 3
 };
 
 char* getPath(int enumObj) {
@@ -33,8 +36,14 @@ char* getPath(int enumObj) {
 	case Sonic:
 		path = "Sonic/Sonic.obj";
 		break;
-	case Lua:
-		path = "moon.obj";
+	case Terreno:
+		path = "mount.obj";
+		break;
+	case Pedra:
+		path = "Rock_1.obj";
+		break;
+	case Pumba:
+		path = "pumba.obj";
 		break;
 	default:
 		break;
@@ -45,7 +54,7 @@ char* getPath(int enumObj) {
 int width = 640;
 int height = 480;
 
-int selectedModel = 0;
+int selectedModel = 1;
 
 const char* vertex_shader =
 "#version 400\n"
@@ -65,15 +74,21 @@ const char* fragment_shader =
 "#version 400\n"
 "in vec2 texture_coordinates;"
 "uniform sampler2D basic_texture;"
+"uniform bool isSelected;"
 "out vec4 frag_colour;"
 "void main() {"
 	"vec4 texel = texture(basic_texture, texture_coordinates);"
-	"frag_colour = texel;"
+	"if (isSelected) {"
+		"frag_colour = vec4(1.0f, 0.0f, 0.0f, 0.4f);"
+	"} else {"
+		"frag_colour = texel;"
+	"}"
 "}";
 
 Mesh* m = new Mesh();
 vector<Material*> mat;
 vector<Mesh*> models;
+vector<Object*> objetos;
 
 void reshape(GLFWwindow* window, int width, int height)
 {
@@ -235,20 +250,26 @@ void bindBufferedData(Mesh* m) {
 }
 
 void drawObject(int s_program) {
-	for (int i = 0; i < models.size(); i++)
+	for (int i = 0; i < objetos.size(); i++)
 	{
-		for (int j = 0; j < models[i]->groups.size(); j++)
-		{
-			GLint model_mat_location = glGetUniformLocation(s_program, "model");
-			mat4 M = translate(identity_mat4(), vec3(models[i]->posX, models[i]->posY, models[i]->posZ));
-			glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, M.m);
+		GLint model_mat_location = glGetUniformLocation(s_program, "model");
+		GLint selected_location = glGetUniformLocation(s_program, "isSelected");
 
-			int vao = models[i]->groups[j]->indexVAO;
-			glBindTexture(GL_TEXTURE_2D, models[i]->groups[j]->indexMaterial);
+		mat4 S = scale(identity_mat4(), vec3(objetos[i]->escala, objetos[i]->escala, objetos[i]->escala));
+		mat4 M = translate(identity_mat4(), vec3(objetos[i]->posX, objetos[i]->posY, objetos[i]->posZ));
+		mat4 T = M * S;
+		glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, T.m);
+
+		glUniform1i(selected_location, (i == selectedModel && selectMode) ? GL_TRUE : GL_FALSE);
+		
+		for (int j = 0; j < models[objetos[i]->indexElement]->groups.size(); j++)
+		{
+			int vao = models[objetos[i]->indexElement]->groups[j]->indexVAO;
+			glBindTexture(GL_TEXTURE_2D, models[objetos[i]->indexElement]->groups[j]->indexMaterial);
 			glBindVertexArray(vao);
 
 			// draw points 0-3 from the currently bound VAO with current in-use shader
-			glDrawArrays(GL_TRIANGLES, 0, models[i]->groups[j]->glfw_points.size());
+			glDrawArrays(GL_TRIANGLES, 0, models[objetos[i]->indexElement]->groups[j]->glfw_points.size());
 			// update other events like input handling 
 			glfwPollEvents();
 		}
@@ -270,17 +291,52 @@ void duplicateObject(int model) {
 void keyboardFuncion(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (action != GLFW_PRESS) return;
 
-	switch (key)
+	if (key == GLFW_KEY_SPACE) 
 	{
-	case GLFW_KEY_SPACE:
-		//duplicateObject(models[selectedModel]->indexObject);
-		break;
-	case GLFW_KEY_P:
-		selectedModel++;
-		break;
-	case GLFW_KEY_O:
-		selectedModel--;
-		break;		
+		if (objetos[selectedModel]->indexElement == Sonic) return;
+
+		Object* obj = new Object(objetos[selectedModel]->indexElement);
+		obj->escala = objetos[selectedModel]->escala;
+		obj->posX = objetos[selectedModel]->posX + 5.0f;
+		obj->posZ = objetos[selectedModel]->posZ + 5.0f;
+		objetos.push_back(obj);
+		selectedModel = objetos.size() - 1;
+		selectMode = true;
+	}
+	else if (key == GLFW_KEY_1) 
+	{
+		Object* obj = new Object(Pedra);
+		obj->escala = 10.0f;
+		objetos.push_back(obj);
+		selectedModel = objetos.size() - 1;
+		selectMode = true;
+	}
+	else if (key == GLFW_KEY_2)
+	{
+		Object* obj = new Object(Pumba);
+		obj->escala = 10.0f;
+		objetos.push_back(obj);
+		selectedModel = objetos.size() - 1;
+		selectMode = true;
+	}
+	else if (key == GLFW_KEY_P)
+	{
+		if (selectedModel < objetos.size() - 1) 
+		{
+			selectedModel++;
+			selectMode = true;
+		}
+	}
+	else if (key == GLFW_KEY_O) 
+	{
+		if (selectedModel > 1) 
+		{
+			selectedModel--;
+			selectMode = true;
+		}
+	}
+	else if (key == GLFW_KEY_H) {
+		selectMode = false;
 	}
 }
 
@@ -305,12 +361,29 @@ void init(GLFWwindow* window) {
 	printf("OpenGL (versão suportada) %s\n", version);
 
 	OBJReader* reader = new OBJReader();
+	m->indexObject = Terreno;
+	reader->readObj(getPath(m->indexObject), m, mat);
+	models.push_back(m);
+	Object* obj = new Object(m->indexObject);
+	obj->escala = 80.0f;
+	obj->posX = -160.0f;
+	obj->posY = -115.0f;
+	objetos.push_back(obj);
+
+	m = new Mesh();
 	m->indexObject = Sonic;
+	reader->readObj(getPath(m->indexObject), m, mat);
+	models.push_back(m);
+	obj = new Object(m->indexObject);
+	objetos.push_back(obj);
+
+	m = new Mesh();
+	m->indexObject = Pedra;
 	reader->readObj(getPath(m->indexObject), m, mat);
 	models.push_back(m);
 
 	m = new Mesh();
-	m->indexObject = Lua;
+	m->indexObject = Pumba;
 	reader->readObj(getPath(m->indexObject), m, mat);
 	models.push_back(m);
 
@@ -320,20 +393,6 @@ void init(GLFWwindow* window) {
 		models[i]->generatePoints();
 	}
 	generateIDs();
-}
-
-void pseudoAIEvent() {
-	float dy = (models[Sonic]->posZ - models[Lua]->posZ);
-	float dx = (models[Sonic]->posX - models[Lua]->posX);
-	if ((int)dx == 0) {
-		models[Lua]->posZ += (dy > 0) ? 0.05f : -0.05f;
-	}
-	else {
-		float m = (float)dy / dx;
-		float b = models[Lua]->posZ - (m * models[Lua]->posX);
-		models[Lua]->posX += (dx > 0) ? 0.05f : -0.05f;
-		models[Lua]->posZ = (m * models[Lua]->posX) + b;
-	}
 }
 
 int main() {
@@ -453,16 +512,6 @@ int main() {
 
 		bool cam_moved = false;
 
-		if (glfwGetKey(window, GLFW_KEY_R)) {                   //Resets everything
-			cam_pos[0] = models[Sonic]->posX + 35.0f;
-			cam_pos[1] = models[Sonic]->posY + 30.0f;
-			cam_pos[2] = models[Sonic]->posZ - 35.0f;
-			cam_yaw = 140.0f;
-			cam_xaw = 0.0f;
-			cam_moved = true;
-			top = false;
-		}
-
 		if (glfwGetKey(window, GLFW_KEY_T)) {                   //Resets everything
 			cam_pos[0] = 0.0f;
 			cam_pos[1] = 265.0f;
@@ -475,14 +524,10 @@ int main() {
 
 		if (glfwGetKey(window, GLFW_KEY_A)) {
 			cam_pos[0] -= cam_speed * elapsed_seconds;
-
-			printf("\ndif pos[0]: %f", models[Sonic]->posX - cam_pos[0]);
 			cam_moved = true;
 		}
 		if (glfwGetKey(window, GLFW_KEY_D)) {
 			cam_pos[0] += cam_speed * elapsed_seconds;
-
-			printf("\ndif pos[0]: %f", models[Sonic]->posX - cam_pos[0]);
 			cam_moved = true;
 		}
 		if (glfwGetKey(window, GLFW_KEY_PAGE_UP)) {
@@ -500,7 +545,6 @@ int main() {
 		}
 		if (glfwGetKey(window, GLFW_KEY_S)) {
 			cam_pos[2] += cam_speed * elapsed_seconds;
-
 			cam_moved = true;
 		}
 		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
@@ -519,79 +563,30 @@ int main() {
 			cam_xaw -= cam_yaw_speed * elapsed_seconds;
 			cam_moved = true;
 		}
-		if (glfwGetKey(window, GLFW_KEY_I)) {
-			models[selectedModel]->posZ -= 0.2f;
-			if (top == false) {
-				cam_pos[0] = models[Sonic]->posX + 35.0f;
-				cam_pos[1] = models[Sonic]->posY + 30.0f;
-				cam_pos[2] = models[Sonic]->posZ - 35.0f;
-				cam_yaw = 140.0f;
-				cam_xaw = 0.0f;
-				cam_moved = true;
-			}
+		if (glfwGetKey(window, GLFW_KEY_Z)) {
+			objetos[selectedModel]->a -= 0.5f;
+			selectMode = true;
 		}
-		if (glfwGetKey(window, GLFW_KEY_K)) {
-			models[selectedModel]->posZ += 0.2f;
-			if (top == false) {
-				cam_pos[0] = models[Sonic]->posX + 35.0f;
-				cam_pos[1] = models[Sonic]->posY + 30.0f;
-				cam_pos[2] = models[Sonic]->posZ - 35.0f;
-				cam_yaw = 140.0f;
-				cam_xaw = 0.0f;
-				cam_moved = true;
-			}
-		}
-		if (glfwGetKey(window, GLFW_KEY_N)) {
-			models[selectedModel]->posY -= 0.2f;
-			if (top == false) {
-				cam_pos[0] = models[Sonic]->posX + 35.0f;
-				cam_pos[1] = models[Sonic]->posY + 30.0f;
-				cam_pos[2] = models[Sonic]->posZ - 35.0f;
-				cam_yaw = 140.0f;
-				cam_xaw = 0.0f;
-				cam_moved = true;
-			}
+		if (glfwGetKey(window, GLFW_KEY_X)) {
+			objetos[selectedModel]->a += 0.5f;
+			selectMode = true;
 		}
 		if (glfwGetKey(window, GLFW_KEY_M)) {
-			models[selectedModel]->posY += 0.2f;
-			if (top == false) {
-				cam_pos[0] = models[Sonic]->posX + 35.0f;
-				cam_pos[1] = models[Sonic]->posY + 30.0f;
-				cam_pos[2] = models[Sonic]->posZ - 35.0f;
-				cam_yaw = 140.0f;
-				cam_xaw = 0.0f;
-				cam_moved = true;
-			}
+			objetos[selectedModel]->posY += 0.5f;
+			selectMode = true;
 		}
-		if (glfwGetKey(window, GLFW_KEY_J)) {
-			models[selectedModel]->posX -= 0.2f;
-			if (top == false) {
-				cam_pos[0] = models[Sonic]->posX + 35.0f;
-				cam_pos[1] = models[Sonic]->posY + 30.0f;
-				cam_pos[2] = models[Sonic]->posZ - 35.0f;
-				cam_yaw = 140.0f;
-				cam_xaw = 0.0f;
-				cam_moved = true;
-			}
+		if (glfwGetKey(window, GLFW_KEY_N)) {
+			objetos[selectedModel]->posY -= 0.5f;
+			selectMode = true;
 		}
-		if (glfwGetKey(window, GLFW_KEY_L)) {
-			models[selectedModel]->posX += 0.2f;
-			if (top == false) {
-				cam_pos[0] = models[Sonic]->posX + 35.0f;
-				cam_pos[1] = models[Sonic]->posY + 30.0f;
-				cam_pos[2] = models[Sonic]->posZ - 35.0f;
-				cam_yaw = 140.0f;
-				cam_xaw = 0.0f;
-				cam_moved = true;
-			}
-		}
-		
+
 		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) {
 			double x = 0.0f;
 			double y = 0.0f;
 			glfwGetCursorPos(window, &x, &y);
-			models[selectedModel]->posX = (x * (450.0f / (float)width)) - 225;
-			models[selectedModel]->posZ = (y * (344.0f / (float)height)) - 172;
+			objetos[selectedModel]->posX = ((x * (450.0f / (float)width)) - 225);
+			objetos[selectedModel]->posZ = ((y * (344.0f / (float)height)) - 172);
+			selectMode = true;
 		}
 		/* update view matrix */
 		if (cam_moved) {
@@ -601,8 +596,6 @@ int main() {
 			mat4 view_mat = R * R2 * T;
 			glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
 		}
-
-		pseudoAIEvent();
 
 		if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_ESCAPE)) {
 			glfwSetWindowShouldClose(window, 1);
