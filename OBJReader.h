@@ -3,8 +3,9 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include "MTLReader.h";
-#include "Material.h";
+#include "MTLReader.h"
+#include "Material.h"
+#include "Object.h"
 
 using namespace std;
 
@@ -130,6 +131,71 @@ public:
 
 		MTLReader* mtlReader = new MTLReader();
 		mtlReader->read(MTL_FILE_NAME, mat);
+	}
+
+	void readElements(char* path, vector<Object*> &elements) 
+	{
+		ifstream OBJ_FILE(path);
+
+		string line;
+		char word[60];
+
+		for (int lineNumber = 0; getline(OBJ_FILE, line); lineNumber++)
+		{
+			stringstream ss(line);
+
+			Object* m = new Object(-1);
+			for (int i = 0; ss >> word; i++) 
+			{
+				switch (i)
+				{
+				case 0:
+					m->indexElement = atoi(word);
+					break;
+				case 1:
+					m->posX = atof(word);
+					break;
+				case 2:
+					m->posY = atof(word);
+					break;
+				case 3:
+					m->posZ = atof(word);
+					break;
+				case 4:
+					m->escala = atof(word);
+					break;
+				case 5:
+					m->a = atof(word);
+					break;
+				}
+			}
+			elements.push_back(m);
+		}
+	}
+
+	void saveElements(char* path, vector<Object*> &elements) 
+	{
+		ofstream myfile(path, ios_base::in | ios_base::out | ios_base::trunc);
+		if (myfile.is_open())
+		{
+			for (int i = 0; i < elements.size(); i++)
+			{
+				myfile << elements[i]->indexElement;
+				myfile << " ";
+				myfile << elements[i]->posX;
+				myfile << " ";
+				myfile << elements[i]->posY;
+				myfile << " ";
+				myfile << elements[i]->posZ;
+				myfile << " ";
+				myfile << elements[i]->escala;
+				myfile << " ";
+				myfile << elements[i]->a;
+				myfile << "\n";
+			}
+			myfile.close();
+		}
+		else cout << "Unable to open file";
 	}
 
 	vector<string> &split(const string &s, char delim, vector<string> &elems) {

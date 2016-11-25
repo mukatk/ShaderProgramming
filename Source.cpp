@@ -16,7 +16,6 @@
 #include "OBJReader.h"
 #include "Object.h"
 
-
 using namespace std;
 
 bool top = true;
@@ -25,13 +24,11 @@ bool selectMode = true;
 enum objeto {
 	Terreno = 0,
 	Sonic = 1,
-<<<<<<< HEAD
 	Pedra = 2,
 	Pumba = 3
-=======
-	Pedra = 2
->>>>>>> master
 };
+
+char* mapPath = "map.txt";
 
 char* getPath(int enumObj) {
 	char* path = "";
@@ -45,17 +42,38 @@ char* getPath(int enumObj) {
 		break;
 	case Pedra:
 		path = "Rock_1.obj";
-<<<<<<< HEAD
 		break;
 	case Pumba:
 		path = "pumba.obj";
-=======
->>>>>>> master
 		break;
 	default:
 		break;
 	}
 	return path;
+}
+
+bool isInRectangle(double centerX, double centerY, double radius,
+	double x, double y)
+{
+	return x >= centerX - radius && x <= centerX + radius &&
+		y >= centerY - radius && y <= centerY + radius;
+}
+
+//test if coordinate (x, y) is within a radius from coordinate (center_x, center_y)
+bool isPointInCircle(double centerX, double centerY,
+	double radius, double x, double y)
+{
+	if (isInRectangle(centerX, centerY, radius, x, y))
+	{
+		double dx = centerX - x;
+		double dy = centerY - y;
+		dx *= dx;
+		dy *= dy;
+		double distanceSquared = dx + dy;
+		double radiusSquared = radius * radius;
+		return distanceSquared <= radiusSquared;
+	}
+	return false;
 }
 
 int width = 640;
@@ -260,20 +278,14 @@ void drawObject(int s_program) {
 	for (int i = 0; i < objetos.size(); i++)
 	{
 		GLint model_mat_location = glGetUniformLocation(s_program, "model");
-<<<<<<< HEAD
 		GLint selected_location = glGetUniformLocation(s_program, "isSelected");
-=======
->>>>>>> master
 
 		mat4 S = scale(identity_mat4(), vec3(objetos[i]->escala, objetos[i]->escala, objetos[i]->escala));
 		mat4 M = translate(identity_mat4(), vec3(objetos[i]->posX, objetos[i]->posY, objetos[i]->posZ));
 		mat4 T = M * S;
 		glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, T.m);
-<<<<<<< HEAD
 
 		glUniform1i(selected_location, (i == selectedModel && selectMode) ? GL_TRUE : GL_FALSE);
-=======
->>>>>>> master
 		
 		for (int j = 0; j < models[objetos[i]->indexElement]->groups.size(); j++)
 		{
@@ -310,45 +322,39 @@ void keyboardFuncion(GLFWwindow* window, int key, int scancode, int action, int 
 
 		Object* obj = new Object(objetos[selectedModel]->indexElement);
 		obj->escala = objetos[selectedModel]->escala;
-		obj->posX = objetos[selectedModel]->posX + 5.0f;
-		obj->posZ = objetos[selectedModel]->posZ + 5.0f;
+		obj->posX = objetos[selectedModel]->posX + 10.0f;
+		obj->posZ = objetos[selectedModel]->posZ + 10.0f;
+		obj->posY = objetos[selectedModel]->posY;
 		objetos.push_back(obj);
 		selectedModel = objetos.size() - 1;
-<<<<<<< HEAD
 		selectMode = true;
-=======
->>>>>>> master
 	}
 	else if (key == GLFW_KEY_1) 
 	{
 		Object* obj = new Object(Pedra);
 		obj->escala = 10.0f;
+		obj->posX = objetos[selectedModel]->posX + 10.0f;
+		obj->posZ = objetos[selectedModel]->posZ + 10.0f;
 		objetos.push_back(obj);
 		selectedModel = objetos.size() - 1;
-<<<<<<< HEAD
 		selectMode = true;
 	}
 	else if (key == GLFW_KEY_2)
 	{
 		Object* obj = new Object(Pumba);
 		obj->escala = 10.0f;
+		obj->posX = objetos[selectedModel]->posX + 10.0f;
+		obj->posZ = objetos[selectedModel]->posZ + 10.0f;
 		objetos.push_back(obj);
 		selectedModel = objetos.size() - 1;
 		selectMode = true;
 	}
 	else if (key == GLFW_KEY_P)
-=======
-	}
-	else if (key == GLFW_KEY_P) 
->>>>>>> master
 	{
 		if (selectedModel < objetos.size() - 1) 
 		{
 			selectedModel++;
-<<<<<<< HEAD
 			selectMode = true;
-=======
->>>>>>> master
 		}
 	}
 	else if (key == GLFW_KEY_O) 
@@ -356,15 +362,33 @@ void keyboardFuncion(GLFWwindow* window, int key, int scancode, int action, int 
 		if (selectedModel > 1) 
 		{
 			selectedModel--;
-<<<<<<< HEAD
 			selectMode = true;
 		}
 	}
-	else if (key == GLFW_KEY_H) {
+	else if (key == GLFW_KEY_H)
+	{
 		selectMode = false;
-=======
-		}
->>>>>>> master
+	}
+	else if (key == GLFW_KEY_DELETE) 
+	{
+		if (objetos[selectedModel]->indexElement == Sonic) return;
+
+		selectMode = true;
+
+		objetos.erase(objetos.begin() + selectedModel--);
+	}
+	else if (key == GLFW_KEY_F2) 
+	{
+		OBJReader* objReader = new OBJReader();
+		objReader->saveElements(mapPath, objetos);
+		selectMode = false;
+	}
+	else if (key == GLFW_KEY_F6) {
+		objetos.clear();
+		OBJReader* objReader = new OBJReader();
+		objReader->readElements(mapPath, objetos);
+		selectedModel = 1;
+		selectMode = true;
 	}
 }
 
@@ -407,14 +431,11 @@ void init(GLFWwindow* window) {
 
 	m = new Mesh();
 	m->indexObject = Pedra;
-<<<<<<< HEAD
 	reader->readObj(getPath(m->indexObject), m, mat);
 	models.push_back(m);
 
 	m = new Mesh();
 	m->indexObject = Pumba;
-=======
->>>>>>> master
 	reader->readObj(getPath(m->indexObject), m, mat);
 	models.push_back(m);
 
@@ -596,7 +617,6 @@ int main() {
 		}
 		if (glfwGetKey(window, GLFW_KEY_Z)) {
 			objetos[selectedModel]->a -= 0.5f;
-<<<<<<< HEAD
 			selectMode = true;
 		}
 		if (glfwGetKey(window, GLFW_KEY_X)) {
@@ -610,23 +630,33 @@ int main() {
 		if (glfwGetKey(window, GLFW_KEY_N)) {
 			objetos[selectedModel]->posY -= 0.5f;
 			selectMode = true;
-=======
-		}
-		if (glfwGetKey(window, GLFW_KEY_X)) {
-			objetos[selectedModel]->a += 0.5f;
->>>>>>> master
 		}
 
 		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) {
 			double x = 0.0f;
 			double y = 0.0f;
 			glfwGetCursorPos(window, &x, &y);
-			objetos[selectedModel]->posX = ((x * (450.0f / (float)width)) - 225);
-			objetos[selectedModel]->posZ = ((y * (344.0f / (float)height)) - 172);
-<<<<<<< HEAD
+
+			int xx = ((x * (450.0f / (float)width)) - 225);
+			int yy = ((y * (344.0f / (float)height)) - 172);
+
+			for (int i = 1; i < objetos.size(); i++)
+			{
+				if (isPointInCircle(xx, yy, 15.0f, objetos[i]->posX, objetos[i]->posZ))
+				{
+					if (i != selectedModel)
+					{
+						selectedModel = i;
+					}
+					else
+					{
+						objetos[selectedModel]->posX = xx;
+						objetos[selectedModel]->posZ = yy;
+					}
+					break;
+				}
+			}
 			selectMode = true;
-=======
->>>>>>> master
 		}
 		/* update view matrix */
 		if (cam_moved) {
